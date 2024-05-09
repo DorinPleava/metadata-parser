@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "metadata-parser"
+version = "0.1.0"
+description = "placeholder desc"
+authors = ["Pleava, Dorin <dorin.pleava@porsche-engineering.ro>"]
+readme = "README.md"
+packages = [{include = "metadata_parser"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+azure-functions = "^1.19.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
