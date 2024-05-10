@@ -9,6 +9,7 @@ packages = [{include = "metadata_parser"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 azure-functions = "^1.19.0"
+azure-eventhub = "^5.11.7"
 
 
 [build-system]
