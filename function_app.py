@@ -5,13 +5,10 @@ import azure.functions as func
 app = func.FunctionApp()
 
 
-@app.blob_trigger(arg_name="myblob", path="mycontainer", connection="pedsstorage_STORAGE")
-def BlobTrigger(myblob: func.InputStream):
-    logging.info(
-        f"Python blob trigger function processed blob" f"Name: {myblob.name}" f"Blob Size: {myblob.length} bytes"
-    )
-
-
-@app.event_grid_trigger(arg_name="azeventgrid")
-def EventGridTrigger(azeventgrid: func.EventGridEvent):
-    logging.info(f"Python EventGrid trigger function processed event" f"Subject: {azeventgrid.subject}")
+@app.event_hub_message_trigger(
+    arg_name="azeventhub",
+    event_hub_name="myeventhub",
+    connection="eventhubnamespacemetadataparser_RootManageSharedAccessKey_EVENTHUB",
+)
+def eventhub_trigger(azeventhub: func.EventHubEvent):
+    logging.info('Python EventHub trigger processed an event: %s', azeventhub.get_body().decode('utf-8'))
