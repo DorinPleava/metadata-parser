@@ -37,6 +37,7 @@ async def eventhub_trigger(azeventhub: func.EventHubEvent):
         event_data = EventData("This is a message from the metadata_parsed_event function")
         await producer.send_event(event_data)
 
+    # test
     # return "Message sent to target Event Hub"
 
 
