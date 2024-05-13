@@ -12,7 +12,7 @@ app = func.FunctionApp()
 @app.event_hub_message_trigger(
     arg_name="azeventhub",
     event_hub_name="myeventhub",
-    connection="pedshub_RootManageSharedAccessKey_storage-to-hub-event",
+    connection="pedshub_RootManageSharedAccessKey_storage_to_hub_event",
 )
 async def eventhub_trigger(azeventhub: func.EventHubEvent):
     logging.info(f"Storage to Hub event: {azeventhub.get_body().decode('utf-8')} triggered")
@@ -22,7 +22,7 @@ async def eventhub_trigger(azeventhub: func.EventHubEvent):
     # Send the parsed metadata to the target Event Hub
 
     # The connection string for the target Event Hub
-    TARGET_EVENT_HUB_CONNECTION_STR = os.environ["pedshub_RootManageSharedAccessKey_metadata-parsed-event"]
+    TARGET_EVENT_HUB_CONNECTION_STR = os.environ["pedshub_RootManageSharedAccessKey_metadata_parsed_event"]
 
     # The name of the target Event Hub
     METADATA_PARSED_EVENT_HUB_NAME = os.environ["metadata_parsed_event_hub_name"] or "metadata-parsed-event"
