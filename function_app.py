@@ -1,7 +1,7 @@
 import json
 import logging
-import os
 from pathlib import Path
+import re
 from urllib.parse import urlparse
 import azure.functions as func
 
@@ -10,6 +10,7 @@ from azure.eventhub.aio import EventHubProducerClient
 
 from event_producers.files_producer import FileProducer
 from factories.file_extractor_factory import FileExtractorFactory
+from peds.ava_interface import AvaClient
 
 app = func.FunctionApp()
 
@@ -61,12 +62,34 @@ async def eventhub_trigger(azeventhub: func.EventHubEvent):
         logging.error("Failed to parse JSON body from event")
         return
 
+    # extract combox from subject path
+    pattern = r'ComBoxApp_\d+'
+
     file_data = body_dict[0]["data"]
+
     complete_url = urlparse(file_data.get("url", ""))
+
+    match = re.search(pattern, complete_url)
+    if match:
+        account = match.group(0)
+    else:
+        logging.error("Could not determine Combox")
+        return
+
     filename = Path(complete_url.path).name
     size = file_data.get("contentLength", 0)
 
     extracted_metadata = FileExtractorFactory().extract_metadata(filename)
+
+    # getting VIN from AVA
+    ava_client = AvaClient(api_prefix_url="http://dewscap0020.emea.porsche.biz:6062/api/")
+
+    ava_vehicle = ava_client.get_vehicle_table_entry_by_account(account)
+    if not ava_vehicle:
+        # self.logger.warning(f"Vehicle not found for account {account}. Cannot extract vehicle VIN")
+        raise ValueError(f"Vehicle not found for account {account}")
+
+    vehicle_vin = ava_vehicle.vin
 
     if extracted_metadata:
         logging.info(f"Metadata extracted: {extracted_metadata}")
@@ -74,7 +97,9 @@ async def eventhub_trigger(azeventhub: func.EventHubEvent):
         logging.info(f"Cound not extract metadata from {filename}, returning only filename and size")
 
     async with FileProducer().get_producer() as producer:
-        event_data = EventData(json.dumps({"filename": filename, "size": size, **extracted_metadata}))
+        event_data = EventData(
+            json.dumps({"filename": filename, "vehicle_vin": vehicle_vin, "size": size, **extracted_metadata})
+        )
         await producer.send_event(event_data)
 
     logging.info(f"Sent message to metadata_parsed_event: {event_data}")
