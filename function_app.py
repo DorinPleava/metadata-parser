@@ -10,7 +10,8 @@ from azure.eventhub.aio import EventHubProducerClient
 
 from event_producers.files_producer import FileProducer
 from factories.file_extractor_factory import FileExtractorFactory
-from peds.ava_interface import AvaClient
+
+# from peds.ava_interface import AvaClient
 
 app = func.FunctionApp()
 
@@ -53,6 +54,11 @@ async def send_message_to_eventhub(event_data: EventData, event_hub_name: str, c
     connection="pedshub_RootManageSharedAccessKey_storage_to_hub_event",
 )
 async def eventhub_trigger(azeventhub: func.EventHubEvent):
+    await process_event(azeventhub)
+
+
+# The logic separated into a different function
+async def process_event(azeventhub: func.EventHubEvent):
     logging.info(f"Storage to Hub event: {azeventhub.get_body().decode('utf-8')} triggered")
 
     body_str = azeventhub.get_body().decode('utf-8')
@@ -69,7 +75,7 @@ async def eventhub_trigger(azeventhub: func.EventHubEvent):
 
     complete_url = urlparse(file_data.get("url", ""))
 
-    match = re.search(pattern, complete_url)
+    match = re.search(pattern, complete_url.path)
     if match:
         account = match.group(0)
     else:
@@ -82,14 +88,15 @@ async def eventhub_trigger(azeventhub: func.EventHubEvent):
     extracted_metadata = FileExtractorFactory().extract_metadata(filename)
 
     # getting VIN from AVA
-    ava_client = AvaClient(api_prefix_url="http://dewscap0020.emea.porsche.biz:6062/api/")
+    # ava_client = AvaClient(api_prefix_url="http://dewscap0020.emea.porsche.biz:6062/api/")
 
-    ava_vehicle = ava_client.get_vehicle_table_entry_by_account(account)
-    if not ava_vehicle:
-        # self.logger.warning(f"Vehicle not found for account {account}. Cannot extract vehicle VIN")
-        raise ValueError(f"Vehicle not found for account {account}")
+    # ava_vehicle = ava_client.get_vehicle_table_entry_by_account(account)
+    # if not ava_vehicle:
+    #     # self.logger.warning(f"Vehicle not found for account {account}. Cannot extract vehicle VIN")
+    #     raise ValueError(f"Vehicle not found for account {account}")
 
-    vehicle_vin = ava_vehicle.vin
+    # vehicle_vin = ava_vehicle.vin
+    vehicle_vin = account
 
     if extracted_metadata:
         logging.info(f"Metadata extracted: {extracted_metadata}")

@@ -10,7 +10,8 @@ packages = [{include = "metadata_parser"}]
 python = ">=3.9,<3.13"
 azure-functions = "^1.19.0"
 azure-eventhub = "^5.11.7"
-peds-common = {path = "D:\\Work\\libraries\\peds_common", develop = true}
+pytest = "^8.2.1"
+pytest-asyncio = "^0.23.7"
 
 
 [build-system]
