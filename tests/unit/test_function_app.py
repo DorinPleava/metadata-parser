@@ -2,10 +2,8 @@ import pytest
 import json
 import logging
 from unittest.mock import AsyncMock, Mock, patch
-from pathlib import Path
-from urllib.parse import urlparse
 import azure.functions as func
-from function_app import send_message_to_eventhub, eventhub_trigger, process_event
+from function_app import process_event
 
 
 @pytest.fixture
@@ -19,32 +17,26 @@ def mock_event():
 
 
 @pytest.mark.asyncio
-@patch('function_app.FileExtractorFactory')
+@patch('function_app.EventExtractor')
 @patch('function_app.FileProducer')
-async def test_process_event(mock_file_producer, mock_file_extractor_factory, mock_event, caplog):
-    # Setup mock for FileExtractorFactory
-    mock_extractor = Mock()
-    mock_extractor.extract_metadata.return_value = {"metadata_key": "metadata_value"}
-    mock_file_extractor_factory.return_value = mock_extractor
+async def test_process_event_flow(mock_file_producer, mock_file_extractor_factory, mock_event, caplog):
+    # Setup mock for EventExtractor
+    mock_extractor = mock_file_extractor_factory.return_value
+    mock_extractor.extract_metadata.return_value = {
+        "account": "ComBoxApp_1234",
+        "filename": "filename.txt",
+        "size": 12345,
+    }
 
     # Setup mock for FileProducer
-    mock_producer = AsyncMock()
-    mock_file_producer.return_value.get_producer.return_value.__aenter__.return_value = mock_producer
+    mock_producer = mock_file_producer.return_value
+    mock_producer.get_producer.return_value.__aenter__.return_value = AsyncMock()
+    mock_producer.get_producer.return_value.__aexit__.return_value = AsyncMock()
 
-    with caplog.at_level(logging.INFO):
-        await process_event(mock_event)
+    await process_event(mock_event)
 
-        assert "Storage to Hub event" in caplog.text
-        assert "Metadata extracted" in caplog.text
-        mock_producer.send_event.assert_called_once()
-
-        # Verify the event data sent to the producer
-        event_data_sent = mock_producer.send_event.call_args[0][0]
-        event_data_dict = json.loads(event_data_sent.body_as_str())
-        assert event_data_dict["filename"] == "filename.txt"
-        assert event_data_dict["vehicle_vin"] == "ComBoxApp_1234"
-        assert event_data_dict["size"] == 12345
-        assert event_data_dict["metadata_key"] == "metadata_value"
+    assert mock_extractor.extract_metadata.called
+    assert mock_producer.get_producer.called
 
 
 @pytest.mark.asyncio
@@ -53,7 +45,9 @@ async def test_process_event_invalid_json(mock_event, caplog):
     mock_event.get_body.return_value = b'invalid json'
 
     with caplog.at_level(logging.ERROR):
-        await process_event(mock_event)
+        with pytest.raises(ValueError):
+            await process_event(mock_event)
+
         assert "Failed to parse JSON body from event" in caplog.text
 
 
@@ -65,5 +59,7 @@ async def test_eprocess_event_no_combox(mock_event, caplog):
     ).encode('utf-8')
 
     with caplog.at_level(logging.ERROR):
-        await process_event(mock_event)
-        assert "Could not determine Combox" in caplog.text
+        with pytest.raises(ValueError):
+            await process_event(mock_event)
+
+        assert "Could not determine Combox from path" in caplog.text

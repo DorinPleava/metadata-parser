@@ -3,7 +3,7 @@ from event_producers.base_producer import BaseProducer
 from azure.eventhub.aio import EventHubProducerClient
 
 
-# in case we will add multiple producers, we can use the strategy pattern
+# in case we will add multiple producers
 class FileProducer(BaseProducer):
 
     def __init__(self):
